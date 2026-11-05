@@ -25,6 +25,7 @@ export const WatchRoomPage: React.FC = () => {
   const [floatingReaction, setFloatingReaction] = useState<{ emoji: string; id: number } | null>(null);
 
   const providerRef = useRef<IMediaProvider | null>(null);
+  const watchAreaRef = useRef<HTMLDivElement>(null);
 
   const cleanRoomId = (roomId || '').toUpperCase();
 
@@ -229,6 +230,16 @@ export const WatchRoomPage: React.FC = () => {
     navigate('/');
   };
 
+  // Theater / Fullscreen Mode: Makes the whole watch room (Movie + Video Call + Chat) full screen together
+  const handleToggleRoomFullscreen = () => {
+    if (!watchAreaRef.current) return;
+    if (!document.fullscreenElement) {
+      watchAreaRef.current.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#09090F] flex flex-col items-center justify-center p-4">
@@ -258,7 +269,7 @@ export const WatchRoomPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#09090F] text-[#F8FAFC] flex flex-col selection:bg-purple-500/30">
+    <div ref={watchAreaRef} className="min-h-screen bg-[#09090F] text-[#F8FAFC] flex flex-col selection:bg-purple-500/30 overflow-y-auto">
       {/* Top Bar Header */}
       <RoomHeader
         roomId={cleanRoomId}
@@ -275,7 +286,7 @@ export const WatchRoomPage: React.FC = () => {
       )}
 
       {/* Main Spacious Cinema Watch Layout */}
-      <main className="flex-1 max-w-[1720px] w-full mx-auto p-3 sm:p-5 lg:p-6">
+      <main className="flex-1 max-w-[1780px] w-full mx-auto p-3 sm:p-5 lg:p-6">
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
           {/* LEFT SECTION — Expanded Movie Player (Col span 8 on xl) */}
           <div className="xl:col-span-8 flex flex-col gap-4">
@@ -294,6 +305,7 @@ export const WatchRoomPage: React.FC = () => {
               onTimeUpdate={setCurrentTime}
               isHost={isHost}
               providerRef={providerRef}
+              onToggleFullscreen={handleToggleRoomFullscreen}
             />
 
             {/* Movie URL Input & Quick Presets Bar */}

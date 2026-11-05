@@ -12,3 +12,4 @@ services:
         value: production
       - key: SERVER_PORT
         value: 10000
+

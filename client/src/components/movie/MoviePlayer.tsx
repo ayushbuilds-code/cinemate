@@ -18,6 +18,7 @@ interface MoviePlayerProps {
   onTimeUpdate: (time: number) => void;
   isHost: boolean;
   providerRef: React.MutableRefObject<IMediaProvider | null>;
+  onToggleFullscreen?: () => void;
 }
 
 export const MoviePlayer: React.FC<MoviePlayerProps> = ({
@@ -34,6 +35,7 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
   onTimeUpdate,
   isHost,
   providerRef,
+  onToggleFullscreen,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerWrapperRef = useRef<HTMLDivElement>(null);
@@ -123,7 +125,11 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
     };
   }, [mediaUrl, mediaProvider]);
 
-  const toggleFullscreen = () => {
+  const handleToggleFullscreen = () => {
+    if (onToggleFullscreen) {
+      onToggleFullscreen();
+      return;
+    }
     if (!playerWrapperRef.current) return;
     if (!document.fullscreenElement) {
       playerWrapperRef.current.requestFullscreen().catch(() => {});
@@ -188,7 +194,7 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
           onPlay={onPlay}
           onPause={onPause}
           onSeek={onSeek}
-          onToggleFullscreen={toggleFullscreen}
+          onToggleFullscreen={handleToggleFullscreen}
           canControl={true}
         />
       )}

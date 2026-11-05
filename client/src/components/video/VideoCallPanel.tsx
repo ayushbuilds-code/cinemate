@@ -40,15 +40,15 @@ export const VideoCallPanel: React.FC<VideoCallPanelProps> = ({
   const isInCall = callStatus !== 'idle' && callStatus !== 'permission-denied';
 
   return (
-    <div className="bg-[#181824] border border-slate-800 rounded-2xl p-3.5 flex flex-col gap-3 shadow-xl">
-      <div className="flex items-center justify-between">
+    <div className="bg-[#181824] border border-slate-800 rounded-2xl p-4 flex flex-col gap-3.5 shadow-xl">
+      <div className="flex items-center justify-between pb-1 border-b border-slate-800/60">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+          <div className="w-2.5 h-2.5 rounded-full bg-purple-500 animate-pulse shadow-sm shadow-purple-500" />
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Live Video Call</h3>
         </div>
 
-        <div className="flex items-center gap-1.5 text-xs text-slate-400">
-          <Users className="w-3.5 h-3.5" />
+        <div className="flex items-center gap-1.5 text-xs text-slate-400 bg-[#11111B] px-2.5 py-1 rounded-lg border border-slate-800">
+          <Users className="w-3.5 h-3.5 text-purple-400" />
           <span>{remoteParticipant ? '2 in Room' : 'Waiting for friend'}</span>
         </div>
       </div>
@@ -63,28 +63,28 @@ export const VideoCallPanel: React.FC<VideoCallPanelProps> = ({
 
       {/* Video Tiles Grid */}
       {!isInCall ? (
-        <div className="bg-[#11111B] rounded-2xl p-7 text-center border border-slate-800 flex flex-col items-center justify-center gap-3.5 min-h-[220px]">
-          <div className="w-14 h-14 rounded-2xl bg-purple-600/15 border border-purple-500/25 flex items-center justify-center text-purple-400 shadow-inner">
-            <Video className="w-7 h-7" />
+        <div className="bg-[#11111B] rounded-2xl p-8 text-center border border-slate-800 flex flex-col items-center justify-center gap-4 min-h-[240px]">
+          <div className="w-16 h-16 rounded-2xl bg-purple-600/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shadow-inner">
+            <Video className="w-8 h-8" />
           </div>
           <div>
             <h4 className="text-sm font-bold text-white mb-1">Face-to-Face Calling</h4>
-            <p className="text-xs text-slate-400 max-w-xs">
+            <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
               Watch together while seeing your friend's live reactions with real-time peer-to-peer WebRTC.
             </p>
           </div>
           <button
             onClick={onStartCall}
-            className="mt-1 bg-purple-600 hover:bg-purple-500 text-white font-medium text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-purple-600/25 border border-purple-500/30 flex items-center gap-2 cursor-pointer transition-all hover:scale-105 active:scale-95"
+            className="mt-1 bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-purple-600/25 border border-purple-500/30 flex items-center gap-2 cursor-pointer transition-all hover:scale-105 active:scale-95"
           >
             <Video className="w-4 h-4" />
             <span>Join Video Call</span>
           </button>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {/* Tiles - larger responsive display */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        <div className="flex flex-col gap-3.5">
+          {/* Tiles - larger responsive display with names displayed ABOVE the boxes */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <VideoTile
               stream={localStream}
               displayName={currentParticipant?.displayName || 'You'}
@@ -104,12 +104,15 @@ export const VideoCallPanel: React.FC<VideoCallPanelProps> = ({
                 role={remoteParticipant.role}
               />
             ) : (
-              <div className="w-full aspect-[4/3] rounded-2xl bg-[#11111B] border border-slate-800 flex flex-col items-center justify-center text-center p-4 gap-2">
-                <div className="w-10 h-10 rounded-full bg-slate-800/80 flex items-center justify-center text-slate-400">
-                  <Users className="w-5 h-5 text-purple-400 animate-pulse" />
+              <div className="flex flex-col gap-1.5 w-full">
+                <div className="px-1 text-xs font-semibold text-slate-400">Friend</div>
+                <div className="w-full aspect-[4/3] rounded-2xl bg-[#11111B] border border-slate-800 flex flex-col items-center justify-center text-center p-4 gap-2">
+                  <div className="w-12 h-12 rounded-full bg-slate-800/80 flex items-center justify-center text-slate-400 shadow-inner">
+                    <Users className="w-6 h-6 text-purple-400 animate-pulse" />
+                  </div>
+                  <span className="text-xs font-semibold text-slate-300">Waiting for friend...</span>
+                  <span className="text-[11px] text-slate-500">Send them the invite link above</span>
                 </div>
-                <span className="text-xs font-semibold text-slate-300">Waiting for friend...</span>
-                <span className="text-[11px] text-slate-500">Send them the invite link above</span>
               </div>
             )}
           </div>
@@ -149,4 +152,3 @@ export const VideoCallPanel: React.FC<VideoCallPanelProps> = ({
     </div>
   );
 };
-
