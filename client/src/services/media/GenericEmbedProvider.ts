@@ -26,15 +26,23 @@ export class GenericEmbedProvider implements IMediaProvider {
     iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
     iframe.allowFullscreen = true;
 
-    // Notice banner for user about third-party un-synchronized embedding
+    // Notice banner for user explaining third-party embed limitations & direct link button
     const banner = document.createElement('div');
-    banner.className = 'absolute top-3 left-3 right-3 bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs px-3 py-2 rounded-lg backdrop-blur-md flex items-center justify-between z-10 pointer-events-auto';
+    banner.className = 'absolute top-3 left-3 right-3 bg-[#181824]/95 border border-amber-500/40 text-amber-200 text-xs px-3.5 py-2.5 rounded-xl backdrop-blur-md flex flex-wrap items-center justify-between gap-2 z-20 pointer-events-auto shadow-2xl';
     banner.innerHTML = `
-      <div class="flex items-center gap-2">
-        <span>ℹ️</span>
-        <span>Embedded successfully, but synchronized controls are not supported for this source.</span>
+      <div class="flex items-center gap-2 flex-1">
+        <span class="text-base">⚠️</span>
+        <div>
+          <p class="font-semibold text-slate-200">Third-Party Website Notice</p>
+          <p class="text-[11px] text-slate-400">If this website refuses to connect, it has enabled <code class="text-amber-300 font-mono">X-Frame-Options: DENY</code> which blocks embedding.</p>
+        </div>
       </div>
-      <button class="text-amber-300 font-medium hover:underline ml-2" onclick="this.parentElement.remove()">Dismiss</button>
+      <div class="flex items-center gap-2">
+        <a href="${url}" target="_blank" rel="noopener noreferrer" class="bg-purple-600 hover:bg-purple-500 text-white font-medium text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 shadow-sm">
+          Open in New Tab ↗
+        </a>
+        <button class="text-slate-400 hover:text-white text-xs px-2 py-1 rounded" onclick="this.closest('.z-20').remove()">✕</button>
+      </div>
     `;
 
     const wrapper = document.createElement('div');
@@ -50,7 +58,7 @@ export class GenericEmbedProvider implements IMediaProvider {
     };
 
     iframe.onerror = () => {
-      callbacks.onError('This website does not allow playback inside CineMate. Try a supported video link.');
+      callbacks.onError('This website does not allow playback inside CineMate. Try a supported video link or direct MP4/WebM URL.');
     };
   }
 
@@ -76,4 +84,3 @@ export class GenericEmbedProvider implements IMediaProvider {
     this.callbacks = null;
   }
 }
-

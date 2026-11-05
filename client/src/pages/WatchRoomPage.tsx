@@ -70,7 +70,7 @@ export const WatchRoomPage: React.FC = () => {
     roomId: cleanRoomId,
     participantId,
     isHost,
-    provider: providerRef.current,
+    providerRef,
   });
 
   // Connect & Join Room on mount or reconnect
