@@ -5,6 +5,7 @@ export class HTML5Provider implements IMediaProvider {
   private container: HTMLElement | null = null;
   private callbacks: MediaProviderCallbacks | null = null;
   private isDestroyed = false;
+  private _isBuffering = false;
 
   public canHandle(url: string): boolean {
     if (!url) return false;
@@ -22,6 +23,7 @@ export class HTML5Provider implements IMediaProvider {
     this.container = container;
     this.callbacks = callbacks;
     this.isDestroyed = false;
+    this._isBuffering = false;
 
     container.innerHTML = '';
     const video = document.createElement('video');
@@ -42,15 +44,11 @@ export class HTML5Provider implements IMediaProvider {
         resolve();
       };
 
-      video.onplay = () => {
-        if (this.isDestroyed) return;
-        callbacks.onPlay(video.currentTime);
-      };
-
-      video.onpause = () => {
-        if (this.isDestroyed) return;
-        callbacks.onPause(video.currentTime);
-      };
+      // NOTE: onplay/onpause are intentionally NOT connected here.
+      // The sync system calls play()/pause() directly via the provider API.
+      // These native events would create an echo loop — remote sync triggers
+      // play() → native 'play' event fires → onPlay callback → emits socket event → loop.
+      // The PlaybackControls UI reads isPlaying state from usePlaybackSync, not from these events.
 
       video.ontimeupdate = () => {
         if (this.isDestroyed) return;
@@ -60,6 +58,41 @@ export class HTML5Provider implements IMediaProvider {
       video.onseeking = () => {
         if (this.isDestroyed) return;
         callbacks.onSeek(video.currentTime);
+      };
+
+      video.ondurationchange = () => {
+        if (this.isDestroyed) return;
+        if (video.duration && isFinite(video.duration)) {
+          callbacks.onDurationChange(video.duration);
+        }
+      };
+
+      // Buffering detection
+      video.onwaiting = () => {
+        if (this.isDestroyed || this._isBuffering) return;
+        this._isBuffering = true;
+        callbacks.onBuffer();
+      };
+
+      video.onstalled = () => {
+        if (this.isDestroyed || this._isBuffering) return;
+        this._isBuffering = true;
+        callbacks.onBuffer();
+      };
+
+      video.oncanplay = () => {
+        if (this.isDestroyed || !this._isBuffering) return;
+        this._isBuffering = false;
+        callbacks.onBufferEnd();
+      };
+
+      video.onplaying = () => {
+        if (this.isDestroyed) return;
+        // If we were buffering and playback resumed naturally, signal buffer end
+        if (this._isBuffering) {
+          this._isBuffering = false;
+          callbacks.onBufferEnd();
+        }
       };
 
       video.onerror = () => {
@@ -80,6 +113,7 @@ export class HTML5Provider implements IMediaProvider {
         if (err.name === 'NotAllowedError') {
           this.callbacks?.onError('Click anywhere on the player to enable audio playback (browser autoplay policy)');
         }
+        // AbortError is common when play() is called while seeking — ignore it
       }
     }
   }
@@ -141,4 +175,3 @@ export class HTML5Provider implements IMediaProvider {
     this.callbacks = null;
   }
 }
-

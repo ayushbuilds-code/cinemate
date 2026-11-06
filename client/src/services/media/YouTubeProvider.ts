@@ -7,6 +7,14 @@ declare global {
   }
 }
 
+// YT Player States
+const YT_UNSTARTED = -1;
+const YT_ENDED = 0;
+const YT_PLAYING = 1;
+const YT_PAUSED = 2;
+const YT_BUFFERING = 3;
+const YT_VIDEO_CUED = 5;
+
 export class YouTubeProvider implements IMediaProvider {
   private player: any = null;
   private container: HTMLElement | null = null;
@@ -14,6 +22,7 @@ export class YouTubeProvider implements IMediaProvider {
   private timeUpdateInterval: any = null;
   private isDestroyed = false;
   private static apiLoadedPromise: Promise<void> | null = null;
+  private _isBuffering = false;
 
   public canHandle(url: string): boolean {
     if (!url) return false;
@@ -74,6 +83,7 @@ export class YouTubeProvider implements IMediaProvider {
     this.container = container;
     this.callbacks = callbacks;
     this.isDestroyed = false;
+    this._isBuffering = false;
 
     const videoId = YouTubeProvider.extractVideoId(url);
     if (!videoId) {
@@ -96,7 +106,7 @@ export class YouTubeProvider implements IMediaProvider {
         videoId: videoId,
         playerVars: {
           autoplay: 0,
-          controls: 0, // We render our custom unified CineMate controls for synchronized feel
+          controls: 0, // CineMate's own synchronized controls
           rel: 0,
           modestbranding: 1,
           playsinline: 1,
@@ -116,14 +126,27 @@ export class YouTubeProvider implements IMediaProvider {
           },
           onStateChange: (event: any) => {
             if (this.isDestroyed) return;
-            // YT.PlayerState.PLAYING == 1, PAUSED == 2
-            if (event.data === 1) {
-              const time = this.getCurrentTime();
-              callbacks.onPlay(time);
-            } else if (event.data === 2) {
-              const time = this.getCurrentTime();
-              callbacks.onPause(time);
+
+            // NOTE: We intentionally do NOT call onPlay/onPause here.
+            // The sync system drives play/pause via provider.play()/pause() directly.
+            // Firing onPlay/onPause from native YT state events creates an echo loop:
+            // remote sync → player.playVideo() → PLAYING event → onPlay callback →
+            // emits socket event → server rebroadcasts → infinite loop.
+            //
+            // We only handle BUFFERING and buffer recovery here.
+
+            if (event.data === YT_BUFFERING) {
+              if (!this._isBuffering) {
+                this._isBuffering = true;
+                callbacks.onBuffer();
+              }
+            } else if (event.data === YT_PLAYING) {
+              if (this._isBuffering) {
+                this._isBuffering = false;
+                callbacks.onBufferEnd();
+              }
             }
+            // PAUSED / ENDED / UNSTARTED — handled by usePlaybackSync directly
           },
           onError: (e: any) => {
             let errorMsg = 'Error loading YouTube video';
@@ -202,7 +225,7 @@ export class YouTubeProvider implements IMediaProvider {
 
   public isPlaying(): boolean {
     if (this.player && typeof this.player.getPlayerState === 'function') {
-      return this.player.getPlayerState() === 1;
+      return this.player.getPlayerState() === YT_PLAYING;
     }
     return false;
   }
@@ -239,4 +262,3 @@ export class YouTubeProvider implements IMediaProvider {
     this.callbacks = null;
   }
 }
-

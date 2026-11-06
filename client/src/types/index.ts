@@ -1,6 +1,6 @@
 export type MediaProviderType = 'youtube' | 'vimeo' | 'html5' | 'embed' | 'none';
 
-export type PlaybackAction = 'play' | 'pause' | 'seek' | 'state' | 'sync-request' | 'sync-response';
+export type PlaybackAction = 'play' | 'pause' | 'seek' | 'state' | 'sync-request' | 'sync-response' | 'buffer-start' | 'buffer-end' | 'coordinated-play';
 
 export interface Participant {
   socketId: string;
@@ -51,6 +51,8 @@ export interface PlaybackEventPayload {
   timestamp: number;
   senderId: string;
   sequenceNumber: number;
+  /** For coordinated-play: future wall-clock ms when both sides should start */
+  startAtMs?: number;
 }
 
 export interface MediaProviderCallbacks {
@@ -61,6 +63,10 @@ export interface MediaProviderCallbacks {
   onDurationChange: (duration: number) => void;
   onError: (error: string) => void;
   onReady: () => void;
+  /** Called when player starts buffering/stalling */
+  onBuffer: () => void;
+  /** Called when buffering has recovered and player is ready to play */
+  onBufferEnd: () => void;
 }
 
 export interface IMediaProvider {
@@ -76,4 +82,3 @@ export interface IMediaProvider {
   setMuted(muted: boolean): void;
   destroy(): void;
 }
-

@@ -47,6 +47,7 @@ export class RoomManager {
       },
       messages: [],
       createdAt: Date.now(),
+      bufferingParticipants: new Set<string>(),
     };
 
     this.rooms.set(roomId, room);
@@ -159,12 +160,9 @@ export class RoomManager {
     const participant = room.participants.find((p) => p.participantId === participantId);
     if (!participant) return { success: false, error: 'Participant not in room' };
 
-    // Check sequence number to ignore stale updates
-    if (payload.sequenceNumber <= room.playbackState.sequenceNumber && payload.action !== 'sync-request') {
-      // allow sync-response or higher seq
-      if (payload.sequenceNumber < room.playbackState.sequenceNumber) {
-        return { success: false, error: 'Stale playback event' };
-      }
+    // Check sequence number to ignore stale updates (strict less-than only)
+    if (payload.sequenceNumber < room.playbackState.sequenceNumber && payload.action !== 'sync-request') {
+      return { success: false, error: 'Stale playback event' };
     }
 
     const isPlaying = payload.action === 'play' ? true : payload.action === 'pause' ? false : room.playbackState.isPlaying;
@@ -178,6 +176,31 @@ export class RoomManager {
     };
 
     return { success: true };
+  }
+
+  /**
+   * Track buffering state per participant.
+   * Returns whether ALL active participants are now ready (not buffering).
+   */
+  public setParticipantBuffering(roomId: string, participantId: string, isBuffering: boolean): boolean {
+    const room = this.rooms.get(roomId);
+    if (!room) return false;
+
+    if (!room.bufferingParticipants) {
+      (room as any).bufferingParticipants = new Set<string>();
+    }
+
+    if (isBuffering) {
+      room.bufferingParticipants.add(participantId);
+      // If we just entered buffering, mark server state as paused
+      room.playbackState.isPlaying = false;
+      room.playbackState.lastUpdatedAt = Date.now();
+    } else {
+      room.bufferingParticipants.delete(participantId);
+    }
+
+    // All ready when no one is buffering
+    return room.bufferingParticipants.size === 0;
   }
 
   public addChatMessage(roomId: string, senderId: string, senderName: string, text: string, isSystem = false): ChatMessage | null {

@@ -28,12 +28,13 @@ export const mediaLoadSchema = z.object({
 export const playbackEventSchema = z.object({
   roomId: z.string().min(1),
   mediaId: z.string().optional(),
-  action: z.enum(['play', 'pause', 'seek', 'state', 'sync-request', 'sync-response']),
+  action: z.enum(['play', 'pause', 'seek', 'state', 'sync-request', 'sync-response', 'buffer-start', 'buffer-end', 'coordinated-play']),
   currentTime: z.number().min(0),
   playbackRate: z.number().min(0.25).max(4).default(1),
   timestamp: z.number(),
   senderId: z.string().min(1),
   sequenceNumber: z.number(),
+  startAtMs: z.number().optional(),
 });
 
 export const chatMessageSchema = z.object({

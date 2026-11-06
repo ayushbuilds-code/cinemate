@@ -22,17 +22,67 @@ export function setupPlaybackEvents(io: Server, socket: Socket) {
         return callback?.({ success: false, error: 'Room not found' });
       }
 
-      // Check permissions: by default host has authoritative control,
-      // but if guest initiates, we can allow or validate if host allows shared controls.
-      // We will allow either participant to trigger play/pause/seek for responsive collaboration,
-      // or prioritize host. Let's update authoritative room playback state.
+      // ───────────────────────────────────────────────────────────────────────
+      // Handle buffer-start: one participant started buffering → pause everyone
+      // ───────────────────────────────────────────────────────────────────────
+      if (payload.action === 'buffer-start') {
+        roomManager.setParticipantBuffering(payload.roomId, participant.participantId, true);
+
+        // Broadcast force-pause to ALL participants (including sender) so both sides pause
+        const forcePausePayload = {
+          ...payload,
+          action: 'pause' as const,
+          senderId: 'server', // mark as server-originated to avoid echo filtering on client
+          sequenceNumber: payload.sequenceNumber,
+        };
+        io.to(payload.roomId).emit('playback:sync', forcePausePayload);
+
+        logger.info(`Room ${payload.roomId}: participant ${participant.participantId} buffering — force-paused all`);
+        return callback?.({ success: true });
+      }
+
+      // ───────────────────────────────────────────────────────────────────────
+      // Handle buffer-end: participant finished buffering → check if all ready
+      // ───────────────────────────────────────────────────────────────────────
+      if (payload.action === 'buffer-end') {
+        const allReady = roomManager.setParticipantBuffering(payload.roomId, participant.participantId, false);
+
+        if (allReady) {
+          // Both participants are ready — emit a coordinated-play command
+          // with a future start time 800ms from now so both clients have time to prepare
+          const startAtMs = Date.now() + 800;
+          const coordinatedPayload = {
+            ...payload,
+            action: 'coordinated-play' as const,
+            senderId: 'server',
+            startAtMs,
+            sequenceNumber: payload.sequenceNumber + 1,
+          };
+
+          // Update server playback state to isPlaying = true
+          room.playbackState.isPlaying = true;
+          room.playbackState.lastUpdatedAt = startAtMs;
+          room.playbackState.currentTime = payload.currentTime;
+
+          io.to(payload.roomId).emit('playback:sync', coordinatedPayload);
+          logger.info(`Room ${payload.roomId}: all ready — emitting coordinated-play at ${startAtMs}`);
+        } else {
+          logger.info(`Room ${payload.roomId}: participant ${participant.participantId} ready, waiting for others`);
+        }
+
+        return callback?.({ success: true });
+      }
+
+      // ───────────────────────────────────────────────────────────────────────
+      // Standard play / pause / seek actions
+      // ───────────────────────────────────────────────────────────────────────
       const updateResult = roomManager.updatePlaybackState(payload.roomId, participant.participantId, payload);
       if (!updateResult.success) {
         logger.warn(`Playback update rejected: ${updateResult.error}`);
         return callback?.({ success: false, error: updateResult.error });
       }
 
-      // Broadcast playback action to other participant(s) in room
+      // Broadcast to OTHER participant(s) only — the sender already applied the action locally
       socket.to(payload.roomId).emit('playback:sync', payload);
 
       callback?.({ success: true, playbackState: room.playbackState });
@@ -42,7 +92,7 @@ export function setupPlaybackEvents(io: Server, socket: Socket) {
     }
   });
 
-  // Client requests authoritative sync state (e.g. upon join or drift)
+  // Client requests authoritative sync state (periodic drift correction)
   socket.on('playback:request-sync', (data, callback) => {
     try {
       const room = roomManager.getRoom(data?.roomId);
@@ -50,7 +100,7 @@ export function setupPlaybackEvents(io: Server, socket: Socket) {
         return callback?.({ success: false, error: 'Room not found' });
       }
 
-      // If room is playing, compute elapsed drift time since lastUpdatedAt
+      // Compute elapsed time since state was last updated
       let authoritativeTime = room.playbackState.currentTime;
       if (room.playbackState.isPlaying) {
         const elapsedSec = (Date.now() - room.playbackState.lastUpdatedAt) / 1000;

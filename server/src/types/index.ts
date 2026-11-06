@@ -1,6 +1,6 @@
 export type MediaProviderType = 'youtube' | 'vimeo' | 'html5' | 'embed' | 'none';
 
-export type PlaybackAction = 'play' | 'pause' | 'seek' | 'state' | 'sync-request' | 'sync-response';
+export type PlaybackAction = 'play' | 'pause' | 'seek' | 'state' | 'sync-request' | 'sync-response' | 'buffer-start' | 'buffer-end' | 'coordinated-play';
 
 export interface Participant {
   socketId: string;
@@ -40,6 +40,8 @@ export interface RoomState {
   playbackState: PlaybackState;
   messages: ChatMessage[];
   createdAt: number;
+  /** Set of participantIds currently buffering */
+  bufferingParticipants: Set<string>;
 }
 
 export interface PlaybackEventPayload {
@@ -51,5 +53,6 @@ export interface PlaybackEventPayload {
   timestamp: number;
   senderId: string;
   sequenceNumber: number;
+  /** For coordinated-play: future wall-clock ms when both sides should call play() */
+  startAtMs?: number;
 }
-

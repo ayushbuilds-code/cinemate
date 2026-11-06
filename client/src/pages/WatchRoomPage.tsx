@@ -65,6 +65,8 @@ export const WatchRoomPage: React.FC = () => {
     handlePlay,
     handlePause,
     handleSeek,
+    handleBuffer,
+    handleBufferEnd,
   } = usePlaybackSync({
     socket,
     roomId: cleanRoomId,
@@ -72,7 +74,6 @@ export const WatchRoomPage: React.FC = () => {
     isHost,
     providerRef,
   });
-
   // Connect & Join Room on mount or reconnect
   useEffect(() => {
     if (!socket || !cleanRoomId) return;
@@ -303,6 +304,8 @@ export const WatchRoomPage: React.FC = () => {
               onSeek={handleSeek}
               onDurationChange={setDuration}
               onTimeUpdate={setCurrentTime}
+              onBuffer={handleBuffer}
+              onBufferEnd={handleBufferEnd}
               isHost={isHost}
               providerRef={providerRef}
               onToggleFullscreen={handleToggleRoomFullscreen}

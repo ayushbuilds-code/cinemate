@@ -16,6 +16,8 @@ interface MoviePlayerProps {
   onSeek: (seconds: number) => void;
   onDurationChange: (duration: number) => void;
   onTimeUpdate: (time: number) => void;
+  onBuffer: () => void;
+  onBufferEnd: () => void;
   isHost: boolean;
   providerRef: React.MutableRefObject<IMediaProvider | null>;
   onToggleFullscreen?: () => void;
@@ -33,6 +35,8 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
   onSeek,
   onDurationChange,
   onTimeUpdate,
+  onBuffer,
+  onBufferEnd,
   isHost,
   providerRef,
   onToggleFullscreen,
@@ -73,13 +77,13 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
 
     providerInstance
       .load(mediaUrl, containerRef.current, {
-        onPlay: (time) => {
+        onPlay: (_time) => {
+          // Intentionally unused — echo suppressed. usePlaybackSync manages play state.
           if (!active) return;
-          onPlay();
         },
-        onPause: (time) => {
+        onPause: (_time) => {
+          // Intentionally unused — echo suppressed. usePlaybackSync manages pause state.
           if (!active) return;
-          onPause();
         },
         onSeek: (time) => {
           if (!active) return;
@@ -103,6 +107,14 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
           if (isPlaying) {
             providerInstance.play();
           }
+        },
+        onBuffer: () => {
+          if (!active) return;
+          onBuffer();
+        },
+        onBufferEnd: () => {
+          if (!active) return;
+          onBufferEnd();
         },
         onError: (err) => {
           if (!active) return;
